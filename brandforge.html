@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BrandForge — AI Brand Strategist</title>
+<style>
+:root{
+  --bg:#faf9f7; --panel:#fff; --ink:#171512; --sub:#6b6459; --line:#e7e2da;
+  --accent:#b3572e; --accent2:#2e4a3f; --err:#b3312e;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#15140f; --panel:#1e1c17; --ink:#f2ede4; --sub:#a89e8d; --line:#33302a; }
+}
+:root[data-theme="dark"]{ --bg:#15140f; --panel:#1e1c17; --ink:#f2ede4; --sub:#a89e8d; --line:#33302a; }
+html{scroll-padding-top:env(safe-area-inset-top,0px); height:100%;}
+*{box-sizing:border-box;}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;}
+header{padding:18px 16px 8px;max-width:900px;margin:0 auto;}
+h1{font-size:1.3rem;margin:0 0 2px;}
+.sub{color:var(--sub);font-size:.85rem;margin:0 0 14px;}
+nav{display:flex;gap:6px;flex-wrap:wrap;max-width:900px;margin:0 auto;padding:0 16px 10px;}
+nav button{flex:1;min-width:90px;padding:8px 6px;border-radius:8px;border:1px solid var(--line);
+  background:var(--panel);color:var(--sub);font-size:.72rem;cursor:pointer;}
+nav button.active{border-color:var(--accent);color:var(--accent);font-weight:600;}
+nav button:disabled{opacity:.4;cursor:not-allowed;}
+main{max-width:900px;margin:0 auto;padding:10px 16px 60px;}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
+h2{font-size:1.05rem;margin:0 0 4px;}
+p.hint{color:var(--sub);font-size:.85rem;margin:0 0 10px;}
+textarea,input[type=text]{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);
+  background:var(--bg);color:var(--ink);font-family:inherit;font-size:.9rem;}
+textarea{min-height:80px;resize:vertical;}
+label{font-size:.8rem;color:var(--sub);display:block;margin:10px 0 4px;}
+button.btn{background:var(--accent);color:#fff;border:none;padding:10px 16px;border-radius:8px;
+  font-size:.9rem;cursor:pointer;margin-top:10px;}
+button.btn.secondary{background:var(--accent2);}
+button.btn:disabled{opacity:.5;cursor:wait;}
+.out{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;}
+.field{margin-bottom:8px;}
+.field b{display:block;font-size:.78rem;color:var(--sub);text-transform:uppercase;letter-spacing:.03em;}
+.field ul{margin:4px 0;padding-left:18px;}
+.swatches{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.swatch{width:70px;text-align:center;font-size:.7rem;}
+.swatch .chip{height:44px;border-radius:8px;border:1px solid var(--line);margin-bottom:4px;}
+.err{color:var(--err);font-size:.85rem;margin-top:8px;}
+.loading{font-size:.85rem;color:var(--sub);}
+.editable{outline:none;border-bottom:1px dashed transparent;padding:2px 0;cursor:text;}
+.editable:focus{border-color:var(--accent);background:rgba(179,87,46,.07);}
+.editable.edited{border-bottom:1px dashed var(--accent2);}
+.editable.edited::after{content:" ✎ edited by you";font-size:.68rem;color:var(--accent2);}
+.namecard{display:block;border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:6px;cursor:pointer;}
+.namecard input{margin-right:6px;}
+.contrib{background:rgba(46,74,63,.08);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.82rem;margin-bottom:10px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>BrandForge</h1>
+  <p class="sub">An adaptive AI workflow that turns a rough idea into a launch-ready brand system — with a built-in critic that checks its own work.</p>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+
+<script>
+const STAGES = ["Discover","Position","Shape","Challenge","Visualize","Deliver"];
+let cur = 0;
+let sample = null;
+let state = { discovery:null, followupAnswers:"", position:null, shape:null, critique:null,
+  applied:false, visual:null, deliver:null, humanNotes:{}, humanEdits:new Set(), lastPrompts:{} };
+let unlocked = [true,false,false,false,false,false];
+
+function esc(s){ return String(s).replace(/"/g,'&quot;'); }
+function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function promptDisclosure(stageKey){
+  if(!state.lastPrompts[stageKey]) return '';
+  return `<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:.78rem;color:var(--sub);">View the exact prompt sent to the AI for this stage</summary><pre style="white-space:pre-wrap;font-size:.72rem;background:var(--bg);padding:8px;border-radius:6px;border:1px solid var(--line);">${escapeHtml(state.lastPrompts[stageKey])}</pre></details>`;
+}
+
+// Delegated edit tracking: any element with class "editable" and data-path,
+// nested inside a [data-root] container, writes straight back into state
+// and gets visibly flagged as human-edited when changed from the AI original.
+document.addEventListener('blur', (e)=>{
+  const t = e.target;
+  if(!t.classList || !t.classList.contains('editable')) return;
+  const rootEl = t.closest('[data-root]');
+  if(!rootEl) return;
+  const rootKey = rootEl.dataset.root;
+  const segs = t.dataset.path.split('.');
+  let ref = state[rootKey];
+  for(let i=0;i<segs.length-1;i++){
+    const seg = isNaN(segs[i]) ? segs[i] : +segs[i];
+    ref = ref[seg];
+  }
+  const last = isNaN(segs[segs.length-1]) ? segs[segs.length-1] : +segs[segs.length-1];
+  ref[last] = t.textContent.trim();
+  const tag = rootKey+'.'+t.dataset.path;
+  const changed = t.textContent.trim() !== t.dataset.orig;
+  t.classList.toggle('edited', changed);
+  if(changed) state.humanEdits.add(tag); else state.humanEdits.delete(tag);
+}, true);
+
+function renderNav(){
+  const nav = document.getElementById('nav');
+  nav.innerHTML = STAGES.map((s,i)=>
+    `<button class="${i===cur?'active':''}" ${unlocked[i]?'':'disabled'} onclick="goTo(${i})">${i+1}. ${s}</button>`
+  ).join('');
+}
+function goTo(i){ if(!unlocked[i]) return; cur=i; render(); }
+
+function fieldsHTML(obj, skip=[], path=''){
+  let h='';
+  for(const k in obj){
+    if(skip.includes(k)) continue;
+    const label = k.replace(/_/g,' ');
+    const v = obj[k];
+    const p = path ? path+'.'+k : k;
+    h += `<div class="field"><b>${label}</b>`;
+    if(Array.isArray(v)){
+      h += `<ul>${v.map((x,i)=> typeof x==='object'
+        ? `<li>${fieldsHTML(x)}</li>`
+        : `<li class="editable" contenteditable="true" data-path="${p}.${i}" data-orig="${esc(x)}">${x}</li>`
+      ).join('')}</ul>`;
+    } else if(typeof v === 'object' && v){
+      h += fieldsHTML(v, [], p);
+    } else {
+      h += `<div class="editable" contenteditable="true" data-path="${p}" data-orig="${esc(v)}">${v}</div>`;
+    }
+    h += `</div>`;
+  }
+  return h;
+}
+
+async function ensureSample(){
+  if(sample) return sample;
+  try{ sample = await claude.use("sample"); }catch(e){ sample = null; }
+  return sample;
+}
+
+async function callJSON(prompt, btn, stageKey){
+  const s = await ensureSample();
+  if(!s){ throw new Error("AI is unavailable in this view."); }
+  if(stageKey) state.lastPrompts[stageKey] = prompt;
+  if(btn){ btn.disabled = true; btn.dataset.old = btn.textContent; btn.textContent = "Thinking..."; }
+  try{
+    const res = await s.json(prompt, {modelTier:"default"});
+    return res;
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = btn.dataset.old; }
+  }
+}
+
+function render(){
+  renderNav();
+  const main = document.getElementById('main');
+  if(cur===0) return renderDiscover(main);
+  if(cur===1) return renderPosition(main);
+  if(cur===2) return renderShape(main);
+  if(cur===3) return renderChallenge(main);
+  if(cur===4) return renderVisual(main);
+  if(cur===5) return renderDeliver(main);
+}
+
+// STAGE 1 — DISCOVER
+function renderDiscover(main){
+  main.innerHTML = `
+  <div class="card">
+    <h2>Discover</h2>
+    <p class="hint">Describe the rough idea in a sentence or two. The AI will extract the real problem, audience and value — and ask sharp follow-up questions before anything gets branded.</p>
+    <textarea id="ideaInput" placeholder="e.g. I want to build an app that helps students find teammates for hackathons">${state._ideaRaw||''}</textarea>
+    <button class="btn" id="extractBtn">Analyze idea</button>
+    <div id="d1out"></div>
+  </div>`;
+  document.getElementById('extractBtn').onclick = async (e)=>{
+    const idea = document.getElementById('ideaInput').value.trim();
+    if(!idea) return;
+    state._ideaRaw = idea;
+    const out = document.getElementById('d1out');
+    out.innerHTML = '<p class="loading">Interviewing the idea...</p>';
+    try{
+      const prompt = `You are a founder-interview strategist for a brand tool called BrandForge (stage: Discover). A founder gave this rough idea:\n"""${idea}"""\nReturn ONLY valid JSON with keys: core_problem (string), target_user (string), context (string), constraints (string), value (string), open_questions (array of exactly 3 sharp, specific clarifying questions the founder must answer before branding starts). No markdown, no commentary, just the JSON object.`;
+      const json = await callJSON(prompt, e.target, 'discover');
+      state._draftDiscovery = json;
+      out.innerHTML = `<div class="out">${fieldsHTML(json, ['open_questions'])}
+        <div class="field"><b>Answer these before we proceed</b>
+        ${json.open_questions.map((q,i)=>`<label>${q}</label><textarea id="fq${i}"></textarea>`).join('')}
+        </div>
+        <button class="btn secondary" id="finalizeBtn">Finalize discovery</button>
+        ${promptDisclosure('discover')}</div>`;
+      document.getElementById('finalizeBtn').onclick = async (ev)=>{
+        const answers = json.open_questions.map((q,i)=>`Q: ${q}\nA: ${document.getElementById('fq'+i).value.trim()}`).join('\n');
+        state.discovery = { ...json, founder_answers: answers };
+        delete state.discovery.open_questions;
+        unlocked[1] = true; cur = 1; render();
+      };
+    }catch(err){ out.innerHTML = `<p class="err">${err.message}</p>`; }
+  };
+}
+
+// STAGE 2 — POSITION
+function renderPosition(main){
+  main.innerHTML = `<div class="card"><h2>Position</h2>
+  <p class="hint">Category, differentiator and value proposition, built from the Discover stage. Click any line below to edit it yourself.</p>
+  <button class="btn" id="posBtn">${state.position?'Regenerate':'Generate'} positioning</button>
+  <div id="d2out">${state.position?`<div class="out" data-root="position">${fieldsHTML(state.position)}</div>`:''}</div>
+  <label>Why this angle? (optional — your reasoning goes in the brand kit)</label>
+  <textarea oninput="state.humanNotes.position=this.value">${state.humanNotes.position||''}</textarea>
+  </div>`;
+  document.getElementById('posBtn').onclick = async (e)=>{
+    const out = document.getElementById('d2out');
+    out.innerHTML = '<p class="loading">Positioning the brand...</p>';
+    try{
+      const prompt = `You are a positioning strategist AI (stage: Position) for BrandForge. Discovery data:\n${JSON.stringify(state.discovery)}\nReturn ONLY valid JSON with keys: category (string), differentiator (string), value_proposition (one sentence), competitive_angle (string, how it beats the obvious alternative). No commentary.`;
+      const json = await callJSON(prompt, e.target, 'position');
+      state.position = json;
+      out.innerHTML = `<div class="out" data-root="position">${fieldsHTML(json)}${promptDisclosure('position')}</div>`;
+      unlocked[2] = true;
+    }catch(err){ out.innerHTML = `<p class="err">${err.message}</p>`; }
+  };
+  addNextButton(main, 2, !!state.position);
+}
+
+// STAGE 3 — SHAPE
+function renderShape(main){
+  main.innerHTML = `<div class="card"><h2>Shape</h2>
+  <p class="hint">Personality, naming directions, tagline and voice. The AI proposes 3 names — you choose the one you're actually going with, and can edit any line.</p>
+  <button class="btn" id="shapeBtn">${state.shape?'Regenerate':'Generate'} brand identity</button>
+  <div id="d3out">${state.shape?renderShapeOut(state.shape):''}</div>
+  <label>Why this direction? (optional — your reasoning goes in the brand kit)</label>
+  <textarea oninput="state.humanNotes.shape=this.value">${state.humanNotes.shape||''}</textarea>
+  </div>`;
+  document.getElementById('shapeBtn').onclick = async (e)=>{
+    const out = document.getElementById('d3out');
+    out.innerHTML = '<p class="loading">Shaping personality and naming...</p>';
+    try{
+      const prompt = `You are a brand-personality and naming strategist AI (stage: Shape) for BrandForge. Discovery:\n${JSON.stringify(state.discovery)}\nPositioning:\n${JSON.stringify(state.position)}\nReturn ONLY valid JSON with keys: personality_traits (array of 3-5 short trait+one-line justification strings), traits_to_avoid (array of 2-3 strings), naming_directions (array of 3 objects {name, rationale}), tagline (string), one_line_pitch (string), voice_principles (array of 3 strings). No commentary.`;
+      const json = await callJSON(prompt, e.target, 'shape');
+      json.chosen_name = null;
+      state.shape = json;
+      out.innerHTML = renderShapeOut(json);
+      unlocked[3] = true;
+      wireNamingRadios();
+    }catch(err){ out.innerHTML = `<p class="err">${err.message}</p>`; }
+  };
+  wireNamingRadios();
+  addNextButton(main, 3, !!state.shape);
+}
+function renderShapeOut(json){
+  return `<div class="out" data-root="shape">
+    ${fieldsHTML(json, ['naming_directions','chosen_name'])}
+    <div class="field"><b>Naming directions — pick the one you're going with</b>
+    ${json.naming_directions.map((n,i)=>`
+      <label class="namecard"><input type="radio" name="nameChoice" value="${i}" ${json.chosen_name&&json.chosen_name.name===n.name?'checked':''}><b>${n.name}</b> — ${n.rationale}</label>`).join('')}
+    </div>${promptDisclosure('shape')}</div>`;
+}
+function wireNamingRadios(){
+  document.querySelectorAll('input[name=nameChoice]').forEach(r=>{
+    r.onchange = ()=>{ state.shape.chosen_name = state.shape.naming_directions[+r.value]; };
+  });
+}
+
+// STAGE 4 — CHALLENGE
+function renderChallenge(main){
+  main.innerHTML = `<div class="card"><h2>Challenge</h2>
+  <p class="hint">A separate critic agent checks Position and Shape for clichés, contradictions and audience mismatch. You decide whether to apply its fixes.</p>
+  <button class="btn" id="critBtn">${state.critique?'Re-run critique':'Run critique'}</button>
+  <div id="d4out">${state.critique?`<div class="out" data-root="critique">${fieldsHTML(state.critique)}${promptDisclosure('challenge_critique')}</div>`:''}</div>
+  ${state.critique?`<button class="btn secondary" id="applyBtn">${state.applied?'Revisions applied ✓':'Apply revisions'}</button>`:''}
+  <label>Your call on the critique (optional — goes in your brand kit)</label>
+  <textarea oninput="state.humanNotes.challenge=this.value">${state.humanNotes.challenge||''}</textarea>
+  </div>`;
+  document.getElementById('critBtn').onclick = async (e)=>{
+    const out = document.getElementById('d4out');
+    out.innerHTML = '<p class="loading">Hunting for clichés...</p>';
+    try{
+      const prompt = `You are a strict anti-generic critic AI (stage: Challenge) for BrandForge. Review this brand's positioning and shape for clichés, internal contradictions, unexamined bias, and audience mismatch.\nPositioning:\n${JSON.stringify(state.position)}\nShape:\n${JSON.stringify(state.shape)}\nReturn ONLY valid JSON with keys: cliches_detected (array of strings), contradictions (array of strings), audience_mismatch (array of strings, empty array if none), stronger_alternatives (array of strings, concrete replacement suggestions). No commentary.`;
+      const json = await callJSON(prompt, e.target, 'challenge_critique');
+      state.critique = json; state.applied = false;
+      render();
+    }catch(err){ out.innerHTML = `<p class="err">${err.message}</p>`; }
+  };
+  if(state.critique){
+    document.getElementById('applyBtn').onclick = async (e)=>{
+      e.target.disabled = true; e.target.textContent = "Applying...";
+      try{
+        const prompt = `You are revising a brand based on critique. Original positioning:\n${JSON.stringify(state.position)}\nOriginal shape:\n${JSON.stringify(state.shape)}\nCritique:\n${JSON.stringify(state.critique)}\nReturn ONLY valid JSON with keys: position (object, same shape as original positioning, revised to fix the critique) and shape (object, same shape as original shape, revised to fix the critique). No commentary.`;
+        const json = await callJSON(prompt, null, 'challenge_revise');
+        state.position = json.position; state.shape = json.shape; state.applied = true;
+        unlocked[4] = true; render();
+      }catch(err){ alert(err.message); e.target.disabled=false; e.target.textContent="Apply revisions"; }
+    };
+  }
+  addNextButton(main, 4, !!state.critique);
+}
+
+// STAGE 5 — VISUALIZE
+function renderVisual(main){
+  main.innerHTML = `<div class="card"><h2>Visualize</h2>
+  <p class="hint">Typography, color mood and imagery direction that fit the strategy above.</p>
+  <button class="btn" id="visBtn">${state.visual?'Regenerate':'Generate'} visual direction</button>
+  <div id="d5out"></div>
+  <label>Your take on the visual direction (optional)</label>
+  <textarea oninput="state.humanNotes.visual=this.value">${state.humanNotes.visual||''}</textarea>
+  </div>`;
+  const out = document.getElementById('d5out');
+  if(state.visual) renderVisualOut(out, state.visual);
+  document.getElementById('visBtn').onclick = async (e)=>{
+    out.innerHTML = '<p class="loading">Sketching the visual direction...</p>';
+    try{
+      const prompt = `You are a visual-identity strategist AI (stage: Visualize) for BrandForge. Positioning:\n${JSON.stringify(state.position)}\nShape:\n${JSON.stringify(state.shape)}\nReturn ONLY valid JSON with keys: typography (string), color_mood (array of exactly 4 objects {name, hex, rationale}), composition_style (string), symbols_motifs (array of strings), concepts_to_avoid (array of strings). Use real hex codes. No commentary.`;
+      const json = await callJSON(prompt, e.target, 'visual');
+      state.visual = json; unlocked[5] = true;
+      renderVisualOut(out, json);
+    }catch(err){ out.innerHTML = `<p class="err">${err.message}</p>`; }
+  };
+  addNextButton(main, 5, !!state.visual);
+}
+function renderVisualOut(out, json){
+  out.innerHTML = `<div class="out" data-root="visual">
+    ${fieldsHTML(json, ['color_mood'])}
+    <div class="field"><b>Color mood</b><div class="swatches">
+    ${json.color_mood.map(c=>`<div class="swatch"><div class="chip" style="background:${c.hex}"></div>${c.name}<br>${c.hex}</div>`).join('')}
+    </div></div>${promptDisclosure('visual')}</div>`;
+}
+
+// STAGE 6 — DELIVER
+function renderDeliver(main){
+  const editedCount = state.humanEdits.size;
+  const noteCount = Object.values(state.humanNotes).filter(v=>v&&v.trim()).length;
+  const chosenName = state.shape && state.shape.chosen_name ? state.shape.chosen_name.name : 'not chosen yet';
+  main.innerHTML = `<div class="card"><h2>Deliver</h2>
+  <p class="hint">A final consistency check across name, tagline, voice and visuals, plus launch-ready content.</p>
+  <div class="contrib"><b>Human contribution so far:</b> name chosen — <b>${chosenName}</b> · ${editedCount} field(s) hand-edited · ${noteCount} stage note(s) added</div>
+  <button class="btn" id="delBtn">${state.deliver?'Regenerate':'Run final check & generate launch kit'}</button>
+  <div id="d6out">${state.deliver?`<div class="out" data-root="deliver">${fieldsHTML(state.deliver)}${promptDisclosure('deliver')}</div>`:''}</div>
+  ${state.deliver?'<button class="btn secondary" id="dlBtn">Download full brand kit</button>':''}
+  </div>`;
+  document.getElementById('delBtn').onclick = async (e)=>{
+    const out = document.getElementById('d6out');
+    out.innerHTML = '<p class="loading">Checking consistency and drafting launch content...</p>';
+    try{
+      const prompt = `You are a consistency auditor and launch strategist AI (stage: Deliver) for BrandForge. Full brand data:\nDiscovery:${JSON.stringify(state.discovery)}\nPosition:${JSON.stringify(state.position)}\nShape:${JSON.stringify(state.shape)}\nVisual:${JSON.stringify(state.visual)}\nReturn ONLY valid JSON with keys: consistency_aligned (boolean, true if name/tagline/voice/visuals feel like one brand), conflicts_found (array of strings, empty if aligned), landing_headline (string), social_launch_post (string, 2-3 sentences), final_notes (string, one sentence of encouragement/advice for launch). No commentary.`;
+      const json = await callJSON(prompt, e.target, 'deliver');
+      state.deliver = json;
+      render();
+    }catch(err){ out.innerHTML = `<p class="err">${err.message}</p>`; }
+  };
+  // (deliver output is re-rendered via render() -> renderDeliver, which wraps with data-root="deliver")
+  if(state.deliver){
+    document.getElementById('dlBtn').onclick = async ()=>{
+      const md = buildKitMarkdown();
+      try{
+        const dl = await claude.use("downloads");
+        if(dl) await dl.save({filename:"brand-kit.md", data:md});
+        else { const blob=new Blob([md],{type:'text/markdown'}); const a=document.createElement('a');
+          a.href=URL.createObjectURL(blob); a.download='brand-kit.md'; a.click(); }
+      }catch(e){ alert("Download unavailable: "+e.message); }
+    };
+  }
+}
+
+function buildKitMarkdown(){
+  const s = state;
+  const notes = Object.entries(s.humanNotes).filter(([k,v])=>v&&v.trim())
+    .map(([k,v])=>`- **${k}:** ${v}`).join('\n') || '_No notes added._';
+  const edits = s.humanEdits.size ? Array.from(s.humanEdits).map(x=>`- ${x}`).join('\n')
+    : '_No manual text edits — AI-generated wording kept as-is.._';
+  const chosen = s.shape && s.shape.chosen_name ? `${s.shape.chosen_name.name} — ${s.shape.chosen_name.rationale}` : '_Not chosen yet._';
+  return `# Brand Kit\n\n## Human Contribution Log\n**Name chosen by the founder (of 3 AI-proposed directions):** ${chosen}\n\n**Fields the founder manually edited:**\n${edits}\n\n**Founder's reasoning per stage:**\n${notes}\n\n## Discovery\n${JSON.stringify(s.discovery,null,2)}\n\n## Positioning\n${JSON.stringify(s.position,null,2)}\n\n## Brand Shape\n${JSON.stringify(s.shape,null,2)}\n\n## Consistency Critique Applied\n${JSON.stringify(s.critique,null,2)}\n\n## Visual Direction\n${JSON.stringify(s.visual,null,2)}\n\n## Launch\n${JSON.stringify(s.deliver,null,2)}\n`;
+}
+
+function addNextButton(main, nextIdx, ready){
+  if(!ready) return;
+  const b = document.createElement('button');
+  b.className = 'btn secondary'; b.textContent = 'Next stage →';
+  b.style.marginLeft = '8px';
+  b.onclick = ()=>{ unlocked[nextIdx]=true; cur=nextIdx; render(); };
+  main.querySelector('.card').appendChild(b);
+}
+
+render();
+</script>
+</body>
+</html>
