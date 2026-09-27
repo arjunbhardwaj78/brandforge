@@ -4,77 +4,378 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>BrandForge — AI Brand Strategist</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
-  --bg:#faf9f7; --panel:#fff; --ink:#171512; --sub:#6b6459; --line:#e7e2da;
-  --accent:#b3572e; --accent2:#2e4a3f; --err:#b3312e;
+  --paper:#F5F9F3; --plate:#FFFFFF; --ink:#20281F; --sub:#657266; --line:#DCE7D9;
+  --accent:#4C9A6B; --accent2:#2F6B4A; --err:#B14A34; --glow:#E4F3E3;
+  --c1:#3E7CB1; --c2:#2F8F72; --c3:#B08A2E; --c4:#B14A34; --c5:#8A5C99; --c6:#4C9A6B;
+  --font-display:'Fraunces',Georgia,serif; --font-body:'Space Grotesk',-apple-system,sans-serif;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){ --bg:#15140f; --panel:#1e1c17; --ink:#f2ede4; --sub:#a89e8d; --line:#33302a; }
+  :root:not([data-theme="light"]){ --paper:#141a15; --plate:#1c231d; --ink:#E7F2E5; --sub:#8fa08f; --line:#2c362b; --glow:#1c2e21; }
 }
-:root[data-theme="dark"]{ --bg:#15140f; --panel:#1e1c17; --ink:#f2ede4; --sub:#a89e8d; --line:#33302a; }
+:root[data-theme="dark"]{ --paper:#141a15; --plate:#1c231d; --ink:#E7F2E5; --sub:#8fa08f; --line:#2c362b; --glow:#1c2e21; }
 html{scroll-padding-top:env(safe-area-inset-top,0px); height:100%;}
 *{box-sizing:border-box;}
-body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);
-  font-family:-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;}
-header{padding:18px 16px 8px;max-width:900px;margin:0 auto;}
-h1{font-size:1.3rem;margin:0 0 2px;}
-.sub{color:var(--sub);font-size:.85rem;margin:0 0 14px;}
-nav{display:flex;gap:6px;flex-wrap:wrap;max-width:900px;margin:0 auto;padding:0 16px 10px;}
-nav button{flex:1;min-width:90px;padding:8px 6px;border-radius:8px;border:1px solid var(--line);
-  background:var(--panel);color:var(--sub);font-size:.72rem;cursor:pointer;}
-nav button.active{border-color:var(--accent);color:var(--accent);font-weight:600;}
-nav button:disabled{opacity:.4;cursor:not-allowed;}
-main{max-width:900px;margin:0 auto;padding:10px 16px 60px;}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
-h2{font-size:1.05rem;margin:0 0 4px;}
-p.hint{color:var(--sub);font-size:.85rem;margin:0 0 10px;}
-textarea,input[type=text]{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);
-  background:var(--bg);color:var(--ink);font-family:inherit;font-size:.9rem;}
+body{margin:0;min-height:100%;background:var(--paper);color:var(--ink);
+  font-family:var(--font-body);line-height:1.55;}
+.topbar{padding:18px 20px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,var(--glow),var(--paper) 85%);}
+.topbar-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+h1{font-family:var(--font-display);font-weight:600;font-size:1.5rem;margin:0;letter-spacing:-.01em;}
+.sub{color:var(--sub);font-size:.86rem;margin:0;max-width:52ch;flex:1;min-width:220px;}
+#autoRunBtn{margin:0;}
+#autoRunBtn:disabled{background:var(--line);color:var(--sub);cursor:not-allowed;animation:none;}
+.progress{max-width:960px;margin:0 auto;padding:10px 20px;display:flex;gap:8px;flex-wrap:wrap;
+  font-size:.76rem;border-bottom:1px solid var(--line);}
+.progress .pchip{border:1px solid var(--line);background:var(--plate);border-radius:20px;padding:4px 12px;color:var(--sub);}
+.progress .pchip b{color:var(--ink);font-weight:600;}
+.progress .pchip.done{border-color:var(--accent);}
+
+.snapshot{background:linear-gradient(160deg,var(--glow),var(--plate) 60%);border:1px solid var(--line);
+  border-radius:6px;padding:26px 20px;text-align:center;margin-bottom:16px;}
+.snapshot .logopanel{margin:0 auto 10px;width:90px;height:90px;padding:14px;}
+.snapshot h3{font-family:var(--font-display);font-size:1.6rem;margin:4px 0;}
+.snapshot .tagline{font-style:italic;color:var(--sub);margin:0 0 10px;}
+.snapshot .headline{font-weight:600;margin:10px auto;max-width:40ch;}
+.snapshot .swatches{justify-content:center;}
+.scorebadge{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line);
+  background:var(--plate);border-radius:20px;padding:6px 14px;margin-bottom:14px;}
+.scorebadge .num{font-family:var(--font-display);font-size:1.3rem;font-weight:700;color:var(--accent2);}
+.copybtn{background:none;border:1px solid var(--line);border-radius:3px;padding:2px 8px;font-size:.7rem;
+  color:var(--sub);cursor:pointer;margin-left:6px;}
+@media print{
+  nav,.topbar,.progress,#toastwrap,button,.editable.edited::after{display:none!important;}
+  main{padding:0;} .card{border:none;animation:none;box-shadow:none;}
+  body{background:#fff;color:#000;}
+}
+.shell{max-width:960px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:0;}
+@media (min-width:760px){ .shell{grid-template-columns:200px 1fr;align-items:start;} }
+nav{display:flex;gap:6px;overflow-x:auto;padding:14px 20px;border-bottom:1px solid var(--line);
+  scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;}
+nav button{scroll-snap-align:start;}
+@media (min-width:760px){
+  nav{flex-direction:column;border-bottom:none;border-right:1px solid var(--line);
+    padding:20px 12px;position:sticky;top:0;gap:2px;overflow:visible;scroll-snap-type:none;}
+}
+@media (max-width:480px){
+  .card{padding:16px;}
+  main{padding:14px;}
+  .topbar{padding:14px 14px;}
+}
+nav button{flex:none;text-align:left;padding:8px 10px;border-radius:3px;border:1px solid transparent;
+  background:transparent;color:var(--sub);font-family:var(--font-body);font-size:.8rem;cursor:pointer;
+  white-space:nowrap;display:flex;align-items:center;gap:8px;transition:color .15s,border-color .15s;}
+nav button .dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none;transition:background .15s;}
+nav button.active{color:var(--ink);font-weight:600;border-color:var(--line);}
+nav button.active .dot{background:var(--stage-color,var(--accent));}
+nav button:disabled{opacity:.35;cursor:not-allowed;}
+main{padding:20px;min-width:0;}
+.card{background:var(--plate);border:1px solid var(--line);border-top:3px solid var(--stage-color,var(--accent));
+  border-radius:2px;padding:20px;margin-bottom:14px;}
+h2{font-family:var(--font-display);font-weight:600;font-size:1.15rem;margin:0 0 4px;}
+p.hint{color:var(--sub);font-size:.85rem;margin:0 0 14px;max-width:62ch;}
+p.hint strong{color:var(--accent2);}
+textarea,input[type=text]{width:100%;padding:10px;border-radius:3px;border:1px solid var(--line);
+  background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:.9rem;}
 textarea{min-height:80px;resize:vertical;}
-label{font-size:.8rem;color:var(--sub);display:block;margin:10px 0 4px;}
-button.btn{background:var(--accent);color:#fff;border:none;padding:10px 16px;border-radius:8px;
-  font-size:.9rem;cursor:pointer;margin-top:10px;}
+label{font-size:.8rem;color:var(--sub);display:block;margin:12px 0 4px;}
+button.btn{background:var(--accent);color:#fff;border:none;padding:10px 18px;border-radius:3px;
+  font-family:var(--font-body);font-weight:500;font-size:.88rem;cursor:pointer;margin-top:10px;}
 button.btn.secondary{background:var(--accent2);}
 button.btn:disabled{opacity:.5;cursor:wait;}
-.out{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;}
-.field{margin-bottom:8px;}
-.field b{display:block;font-size:.78rem;color:var(--sub);text-transform:uppercase;letter-spacing:.03em;}
+button.btn:focus-visible,.editable:focus-visible,nav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.out{margin-top:14px;border-top:1px solid var(--line);padding-top:12px;}
+.field{margin-bottom:10px;}
+.field b{display:block;font-size:.78rem;color:var(--sub);font-weight:500;margin-bottom:2px;}
 .field ul{margin:4px 0;padding-left:18px;}
 .swatches{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
 .swatch{width:70px;text-align:center;font-size:.7rem;}
-.swatch .chip{height:44px;border-radius:8px;border:1px solid var(--line);margin-bottom:4px;}
+.swatch .chip{height:44px;border-radius:3px;border:1px solid var(--line);margin-bottom:4px;}
+.logopanel{display:flex;align-items:center;justify-content:center;background:var(--paper);
+  border:1px solid var(--line);border-radius:3px;padding:24px;margin:6px 0 14px;}
+.logopanel svg{width:88px;height:88px;}
 .err{color:var(--err);font-size:.85rem;margin-top:8px;}
 .loading{font-size:.85rem;color:var(--sub);}
-.editable{outline:none;border-bottom:1px dashed transparent;padding:2px 0;cursor:text;}
-.editable:focus{border-color:var(--accent);background:rgba(179,87,46,.07);}
+.editable{outline:none;border-bottom:1px dashed var(--line);padding:2px 0;cursor:text;position:relative;}
+.editable:focus{border-color:var(--accent);background:rgba(76,154,107,.1);}
 .editable.edited{border-bottom:1px dashed var(--accent2);}
 .editable.edited::after{content:" ✎ edited by you";font-size:.68rem;color:var(--accent2);}
-.namecard{display:block;border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:6px;cursor:pointer;}
+.editable:not(.edited):hover::before{content:"✎ click to edit";position:absolute;top:-20px;left:0;
+  font-size:.65rem;color:var(--accent2);background:var(--plate);padding:2px 7px;border-radius:3px;
+  border:1px solid var(--line);white-space:nowrap;z-index:5;}
+.namecard{display:block;border:1px solid var(--line);border-radius:3px;padding:8px;margin-bottom:6px;cursor:pointer;}
 .namecard input{margin-right:6px;}
-.contrib{background:rgba(46,74,63,.08);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.82rem;margin-bottom:10px;}
+.contrib{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.contrib .chip{border:1px solid var(--line);background:var(--paper);padding:6px 10px;border-radius:3px;font-size:.75rem;}
+.contrib .chip span{display:block;color:var(--sub);font-size:.68rem;margin-bottom:1px;}
+.contrib .chip b{font-family:var(--font-display);font-weight:600;}
+
+.stamp{width:26px;height:26px;flex:none;color:var(--accent);}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.4);
+  border-top-color:#fff;border-radius:50%;margin-right:7px;vertical-align:-2px;}
+.toastwrap{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;pointer-events:none;z-index:50;}
+.toast{background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:3px;font-size:.82rem;
+  box-shadow:0 4px 16px rgba(0,0,0,.2);}
+
+@media (prefers-reduced-motion: no-preference){
+  .topbar,.shell>nav{animation:riseIn .5s ease both;}
+  .shell>nav{animation-delay:.08s;}
+  .card{animation:cardIn .45s cubic-bezier(.2,.7,.3,1) both; transform-style:preserve-3d;}
+  .out{animation:popIn .35s ease both;}
+  .stamp{animation:breathe 4s ease-in-out infinite;}
+  nav button.active .dot{animation:dotPop .3s ease both;}
+  button.btn:disabled{animation:pulseSoft 1.1s ease-in-out infinite;}
+  .namecard{transition:transform .18s ease,border-color .18s ease;}
+  .namecard:hover{transform:perspective(400px) rotateX(3deg) translateY(-2px);border-color:var(--stage-color,var(--accent));}
+  .toast{animation:toastIn .25s ease both, toastOut .3s ease 2.2s forwards;}
+}
+@keyframes riseIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+@keyframes cardIn{from{opacity:0;transform:perspective(700px) rotateX(-8deg) translateY(16px);}to{opacity:1;transform:perspective(700px) rotateX(0) translateY(0);}}
+@keyframes popIn{from{opacity:0;transform:scale(.97);}to{opacity:1;transform:scale(1);}}
+@keyframes breathe{0%,100%{transform:scale(1) rotate(0deg);}50%{transform:scale(1.08) rotate(4deg);}}
+@keyframes dotPop{from{transform:scale(.3);}to{transform:scale(1);}}
+@keyframes pulseSoft{0%,100%{opacity:.5;}50%{opacity:.8;}}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+@keyframes toastOut{to{opacity:0;transform:translateY(8px);}}
 </style>
 </head>
 <body>
-<header>
+<div class="topbar"><div class="topbar-inner">
+  <svg class="stamp" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <circle cx="20" cy="20" r="17" stroke="currentColor" stroke-width="2.5"/>
+    <path d="M12 22l5 5 11-13" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
   <h1>BrandForge</h1>
   <p class="sub">An adaptive AI workflow that turns a rough idea into a launch-ready brand system — with a built-in critic that checks its own work.</p>
-</header>
+  <button class="btn secondary" id="autoRunBtn" style="margin:0 0 0 auto;" onclick="autoRunRemaining(this)">⚡ Auto-run remaining stages</button>
+</div></div>
+<div id="toastwrap" class="toastwrap"></div>
+<div id="progressStrip" class="progress"></div>
+<div class="shell">
 <nav id="nav"></nav>
 <main id="main"></main>
+</div>
 
 <script>
 const STAGES = ["Discover","Position","Shape","Challenge","Visualize","Deliver"];
+const STAGE_COLORS = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)'];
 let cur = 0;
 let sample = null;
 let state = { discovery:null, followupAnswers:"", position:null, shape:null, critique:null,
-  applied:false, visual:null, deliver:null, humanNotes:{}, humanEdits:new Set(), lastPrompts:{} };
+  applied:false, visual:null, deliver:null, humanNotes:{}, humanEdits:new Set(), lastPrompts:{},
+  introDismissed:false };
 let unlocked = [true,false,false,false,false,false];
 
 function esc(s){ return String(s).replace(/"/g,'&quot;'); }
 function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(msg){
+  const wrap = document.getElementById('toastwrap');
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  wrap.innerHTML = ''; wrap.appendChild(t);
+  setTimeout(()=>{ if(t.parentNode) t.remove(); }, 2600);
+}
+function safeSvg(s){
+  if(!s || typeof s !== 'string') return null;
+  const trimmed = s.trim();
+  if(!/^<svg[\s>]/i.test(trimmed)) return null;
+  if(/<script|on\w+\s*=/i.test(trimmed)) return null;
+  return trimmed;
+}
+function looksInsufficient(obj){
+  return /cannot be determined|insufficient information|no meaningful [a-z]+ (?:exists|yet)|not applicable at this stage|^undefined$|"undefined"/i.test(JSON.stringify(obj));
+}
+function insufficientError(out, label){
+  out.innerHTML = `<p class="err">The AI couldn't give a real answer — what you entered in Discover is too thin to build on.</p>
+    <button class="btn secondary" onclick="unlocked[0]=true;cur=0;render();">← Go back to Discover and add more detail</button>`;
+}
+
+function copyText(btn, text){
+  navigator.clipboard.writeText(text).then(()=>toast('Copied')).catch(()=>toast('Could not copy'));
+}
+
+function brandScore(){
+  let score = 55;
+  if(state.critique) score += 10;
+  if(state.applied) score += 10;
+  if(state.humanEdits.size>0) score += 5;
+  if(state.shape && state.shape.chosen_name) score += 5;
+  if(state.visual && safeSvg(state.visual.logo_svg)) score += 5;
+  if(state.deliver){
+    score += state.deliver.consistency_aligned ? 15 : -10;
+    if(state.deliver.conflicts_found) score -= Math.min(15, state.deliver.conflicts_found.length*5);
+  }
+  return Math.max(35, Math.min(100, score));
+}
+function scoreGrade(s){ return s>=90?'A':s>=80?'A-':s>=70?'B':s>=60?'C':'D'; }
+
+function renderSnapshot(){
+  const name = state.shape && state.shape.chosen_name ? state.shape.chosen_name.name : '(unnamed)';
+  const tagline = state.shape ? state.shape.tagline : '';
+  const headline = state.deliver ? state.deliver.landing_headline : '';
+  const logo = state.visual ? safeSvg(state.visual.logo_svg) : null;
+  const colors = state.visual ? state.visual.color_mood : [];
+  const score = brandScore();
+  return `
+  <div class="snapshot">
+    ${logo?`<div class="logopanel">${logo}</div>`:''}
+    <h3>${name}</h3>
+    ${tagline?`<p class="tagline">"${tagline}"</p>`:''}
+    ${headline?`<p class="headline">${headline}</p>`:''}
+    <div class="swatches">${colors.map(c=>`<div class="swatch"><div class="chip" style="background:${c.hex}"></div>${c.name}</div>`).join('')}</div>
+    <button class="copybtn" style="margin-top:10px;" onclick="copyText(this,${JSON.stringify(`${name} — ${tagline}\n\n${headline}\n\n${(state.shape&&state.shape.one_line_pitch)||''}`)})">Copy share text</button>
+  </div>
+  <div class="scorebadge"><span class="num">${score}</span><span>Brand Health Score — grade ${scoreGrade(score)}<br><span style="font-size:.7rem;color:var(--sub);">rewards a chosen name, applied critique fixes, your own edits, and a consistent final check</span></span></div>
+  <button class="btn secondary" onclick="printBrandKit()">📄 Download as PDF</button>`;
+}
+
+async function printBrandKit(){
+  if(!window.jspdf){ toast('PDF engine still loading — click again in a second.'); return; }
+  const { jsPDF } = window.jspdf;
+  const s = state;
+  const name = s.shape && s.shape.chosen_name ? s.shape.chosen_name.name : 'Untitled Brand';
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  const margin = 48, pageW = 595, pageH = 842, colW = pageW - margin*2;
+  let y = 64;
+  function ensure(need){ if(y > pageH-need){ doc.addPage(); y = 64; } }
+  function heading(text){
+    ensure(70);
+    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(47,107,74);
+    doc.text(text, margin, y); doc.setTextColor(20,20,20); y += 20;
+  }
+  function label(text){
+    ensure(40);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(90,90,90);
+    doc.text(text.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()), margin, y);
+    doc.setTextColor(20,20,20); y += 12;
+  }
+  function para(text){
+    doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
+    doc.splitTextToSize(String(text==null?'—':text), colW).forEach(line=>{
+      ensure(40); doc.text(line, margin, y); y += 13;
+    });
+    y += 8;
+  }
+  function bullets(arr){
+    doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
+    (arr||[]).forEach(item=>{
+      const text = typeof item === 'object' && item ? Object.values(item).join(' — ') : String(item);
+      const lines = doc.splitTextToSize('• '+text, colW-10);
+      lines.forEach((line,i)=>{ ensure(40); doc.text(line, margin + (i>0?10:0), y); y += 13; });
+    });
+    y += 8;
+  }
+  function field(obj, key){ label(key); para(obj[key]); }
+  function fieldList(obj, key){ label(key); bullets(obj[key]); }
+
+  doc.setFont('times','bold'); doc.setFontSize(26); doc.text(name, margin, y); y += 28;
+  if(s.shape && s.shape.tagline){
+    doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(90,90,90);
+    doc.text(s.shape.tagline, margin, y); doc.setTextColor(20,20,20); y += 26;
+  }
+  if(s.deliver && s.deliver.landing_headline) para(s.deliver.landing_headline);
+
+  if(s.position){
+    heading('Positioning');
+    field(s.position,'category'); field(s.position,'differentiator');
+    field(s.position,'value_proposition'); field(s.position,'competitive_angle');
+  }
+  if(s.shape){
+    heading('Brand shape');
+    fieldList(s.shape,'personality_traits'); fieldList(s.shape,'traits_to_avoid');
+    label('chosen name'); para(s.shape.chosen_name ? `${s.shape.chosen_name.name} — ${s.shape.chosen_name.rationale}` : '—');
+    field(s.shape,'one_line_pitch'); fieldList(s.shape,'voice_principles');
+  }
+  if(s.visual && s.visual.color_mood && s.visual.color_mood.length){
+    heading('Color mood');
+    ensure(90);
+    s.visual.color_mood.forEach((c,i)=>{
+      try{ doc.setFillColor(c.hex); }catch(e){}
+      doc.rect(margin + i*95, y, 75, 26, 'F');
+      doc.setFontSize(8); doc.text(`${c.name} ${c.hex}`, margin + i*95, y+38);
+    });
+    y += 54;
+    field(s.visual,'typography'); field(s.visual,'composition_style');
+    fieldList(s.visual,'symbols_motifs'); fieldList(s.visual,'concepts_to_avoid');
+  }
+  if(s.deliver){
+    heading('Launch content');
+    label('consistency check'); para(s.deliver.consistency_aligned ? 'Aligned — no conflicts found.' : 'Conflicts found:');
+    if(!s.deliver.consistency_aligned) bullets(s.deliver.conflicts_found);
+    field(s.deliver,'social_launch_post'); field(s.deliver,'final_notes');
+  }
+  if(s.blueprint){
+    heading('Build blueprint (technical)');
+    field(s.blueprint,'category'); fieldList(s.blueprint,'recommended_stack');
+    fieldList(s.blueprint,'key_features');
+    label('pseudocode');
+    doc.setFont('courier','normal'); doc.setFontSize(8.5);
+    String(s.blueprint.pseudocode||'').split('\n').forEach(line=>{
+      doc.splitTextToSize(line||' ', colW).forEach(l=>{ ensure(40); doc.text(l, margin, y); y += 11; });
+    });
+  }
+
+  const filename = `${name.replace(/[^a-z0-9]+/gi,'-').toLowerCase()}-brand-kit.pdf`;
+  const blob = doc.output('blob');
+  try{
+    const dl = await claude.use("downloads");
+    if(dl){ await dl.save({filename, data: blob}); toast('PDF downloaded'); return; }
+  }catch(e){ /* fall through to direct save below */ }
+  try{
+    doc.save(filename);
+    toast('PDF downloaded');
+  }catch(e){
+    toast('Could not save the PDF: '+e.message);
+  }
+}
+
+async function autoRunRemaining(btn){
+  if(!state.discovery){ toast('Finish Discover first — describe your idea and answer the follow-ups.'); return; }
+  if(btn){ btn.disabled = true; btn.textContent = 'Running all stages...'; }
+  try{
+    if(!state.position){
+      const p1 = `You are a positioning strategist AI (stage: Position) for BrandForge. Discovery data:\n${JSON.stringify(state.discovery)}\nReturn ONLY valid JSON with keys: category (string), differentiator (string), value_proposition (one sentence), competitive_angle (string, how it beats the obvious alternative). No commentary.`;
+      const j1 = await callJSON(p1, null, 'position');
+      if(looksInsufficient(j1)){ toast('Discover answers are too thin — add more detail there first.'); return; }
+      state.position = j1; unlocked[2] = true;
+      await sleep(900);
+    }
+    if(!state.shape){
+      const p2 = `You are a brand-personality and naming strategist AI (stage: Shape) for BrandForge. Discovery:\n${JSON.stringify(state.discovery)}\nPositioning:\n${JSON.stringify(state.position)}\nReturn ONLY valid JSON with keys: personality_traits (array of 3-5 short trait+one-line justification strings), traits_to_avoid (array of 2-3 strings), naming_directions (array of 3 objects {name, rationale}), tagline (string), one_line_pitch (string), voice_principles (array of 3 strings). No commentary.`;
+      const j2 = await callJSON(p2, null, 'shape');
+      if(looksInsufficient(j2)){ toast('Discover answers are too thin — add more detail there first.'); return; }
+      j2.chosen_name = j2.naming_directions[0];
+      state.shape = j2; unlocked[3] = true;
+      await sleep(900);
+    }
+    if(!state.critique){
+      const p3 = `You are a strict anti-generic critic AI (stage: Challenge) for BrandForge. Review this brand's positioning and shape for clichés, internal contradictions, unexamined bias, and audience mismatch.\nPositioning:\n${JSON.stringify(state.position)}\nShape:\n${JSON.stringify(state.shape)}\nReturn ONLY valid JSON with keys: cliches_detected (array of strings), contradictions (array of strings), audience_mismatch (array of strings, empty array if none), stronger_alternatives (array of strings, concrete replacement suggestions). No commentary.`;
+      state.critique = await callJSON(p3, null, 'challenge_critique');
+      await sleep(900);
+      const p4 = `You are revising a brand based on critique. Original positioning:\n${JSON.stringify(state.position)}\nOriginal shape:\n${JSON.stringify(state.shape)}\nCritique:\n${JSON.stringify(state.critique)}\nReturn ONLY valid JSON with keys: position (object, same shape as original positioning, revised to fix the critique) and shape (object, same shape as original shape, revised to fix the critique). No commentary.`;
+      const j4 = await callJSON(p4, null, 'challenge_revise');
+      state.position = j4.position; state.shape = j4.shape; state.applied = true; unlocked[4] = true;
+      await sleep(900);
+    }
+    if(!state.visual){
+      const p5 = `You are a visual-identity strategist AI (stage: Visualize) for BrandForge. Positioning:\n${JSON.stringify(state.position)}\nShape:\n${JSON.stringify(state.shape)}\nReturn ONLY valid JSON with keys: typography (string), color_mood (array of exactly 4 objects {name, hex, rationale}), composition_style (string), symbols_motifs (array of strings), concepts_to_avoid (array of strings), logo_svg (string — a complete, minimal, ORIGINAL abstract logomark as raw SVG markup, viewBox="0 0 120 120", using only <svg>,<circle>,<path>,<rect>,<polygon>,<line> elements with fill/stroke set to 2-3 of the hex colors from color_mood, no text elements, no external references, no <script> or event-handler attributes, reflecting the brand's naming direction and personality traits). Use real hex codes. No commentary, no markdown fences — just the JSON object.`;
+      state.visual = await callJSON(p5, null, 'visual'); unlocked[5] = true;
+      await sleep(900);
+    }
+    if(!state.deliver){
+      const p6 = `You are a consistency auditor and launch strategist AI (stage: Deliver) for BrandForge. Full brand data:\nDiscovery:${JSON.stringify(state.discovery)}\nPosition:${JSON.stringify(state.position)}\nShape:${JSON.stringify(state.shape)}\nVisual:${JSON.stringify(state.visual)}\nReturn ONLY valid JSON with keys: consistency_aligned (boolean, true if name/tagline/voice/visuals feel like one brand), conflicts_found (array of strings, empty if aligned), landing_headline (string), social_launch_post (string, 2-3 sentences), final_notes (string, one sentence of encouragement/advice for launch). No commentary.`;
+      state.deliver = await callJSON(p6, null, 'deliver');
+    }
+    cur = 5; render();
+    toast('All stages generated — review, edit, or regenerate any of them.');
+  }catch(err){ toast('Something failed: '+err.message); }
+  finally{ syncHeader(); }
+}
 function promptDisclosure(stageKey){
   if(!state.lastPrompts[stageKey]) return '';
   return `<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:.78rem;color:var(--sub);">View the exact prompt sent to the AI for this stage</summary><pre style="white-space:pre-wrap;font-size:.72rem;background:var(--bg);padding:8px;border-radius:6px;border:1px solid var(--line);">${escapeHtml(state.lastPrompts[stageKey])}</pre></details>`;
@@ -106,10 +407,31 @@ document.addEventListener('blur', (e)=>{
 function renderNav(){
   const nav = document.getElementById('nav');
   nav.innerHTML = STAGES.map((s,i)=>
-    `<button class="${i===cur?'active':''}" ${unlocked[i]?'':'disabled'} onclick="goTo(${i})">${i+1}. ${s}</button>`
+    `<button class="${i===cur?'active':''}" style="--stage-color:${STAGE_COLORS[i]}" ${unlocked[i]?'':'disabled'} onclick="goTo(${i})"><span class="dot"></span>${String(i+1).padStart(2,'0')} ${s}</button>`
   ).join('');
 }
 function goTo(i){ if(!unlocked[i]) return; cur=i; render(); }
+function stageStyle(){ return `--stage-color:${STAGE_COLORS[cur]}`; }
+
+function syncHeader(){
+  const btn = document.getElementById('autoRunBtn');
+  const allDone = state.deliver;
+  btn.disabled = !state.discovery || !!allDone;
+  btn.title = !state.discovery ? 'Finish Discover first (describe your idea and answer the 3 questions)'
+    : allDone ? 'All stages already generated' : 'Runs every remaining stage for you, in one go';
+  btn.textContent = allDone ? '✓ All stages generated' : '⚡ Auto-run remaining stages';
+
+  const ideaSrc = (state.discovery && state.discovery.corrected_idea) || (state._draftDiscovery && state._draftDiscovery.corrected_idea) || state._ideaRaw;
+  const idea = ideaSrc ? (ideaSrc.length>40?ideaSrc.slice(0,40)+'…':ideaSrc) : null;
+  const cat = state.position && state.position.category;
+  const name = state.shape && state.shape.chosen_name && state.shape.chosen_name.name;
+  const chips = [
+    ['Idea', idea], ['Category', cat], ['Name', name], ['Stage', `${cur+1} of 6 — ${STAGES[cur]}`]
+  ].filter(([,v])=>v);
+  document.getElementById('progressStrip').innerHTML = chips.map(([label,v])=>
+    `<div class="pchip${v?' done':''}"><span>${label}: </span><b>${v}</b></div>`
+  ).join('');
+}
 
 function fieldsHTML(obj, skip=[], path=''){
   let h='';
@@ -140,14 +462,25 @@ async function ensureSample(){
   return sample;
 }
 
+function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 async function callJSON(prompt, btn, stageKey){
   const s = await ensureSample();
   if(!s){ throw new Error("AI is unavailable in this view."); }
   if(stageKey) state.lastPrompts[stageKey] = prompt;
-  if(btn){ btn.disabled = true; btn.dataset.old = btn.textContent; btn.textContent = "Thinking..."; }
+  if(btn){ btn.disabled = true; btn.dataset.old = btn.textContent; }
+  const maxTries = 3;
   try{
-    const res = await s.json(prompt, {modelTier:"default"});
-    return res;
+    for(let attempt=1; attempt<=maxTries; attempt++){
+      if(btn) btn.textContent = attempt===1 ? "Thinking..." : `Retrying (busy) ${attempt-1}/${maxTries-1}...`;
+      try{
+        return await s.json(prompt, {modelTier:"default"});
+      }catch(err){
+        const rateLimited = /sampling too often|rate.?limit|try again later/i.test(err.message||'');
+        if(rateLimited && attempt < maxTries){ await sleep(2500 * attempt); continue; }
+        if(rateLimited) throw new Error("The AI is busy right now (rate limited) — wait about 20 seconds and click the button again.");
+        throw err;
+      }
+    }
   } finally {
     if(btn){ btn.disabled = false; btn.textContent = btn.dataset.old; }
   }
@@ -155,6 +488,7 @@ async function callJSON(prompt, btn, stageKey){
 
 function render(){
   renderNav();
+  syncHeader();
   const main = document.getElementById('main');
   if(cur===0) return renderDiscover(main);
   if(cur===1) return renderPosition(main);
@@ -167,24 +501,30 @@ function render(){
 // STAGE 1 — DISCOVER
 function renderDiscover(main){
   main.innerHTML = `
-  <div class="card">
+  <div class="card" style="${stageStyle()}">
     <h2>Discover</h2>
-    <p class="hint">Describe the rough idea in a sentence or two. The AI will extract the real problem, audience and value — and ask sharp follow-up questions before anything gets branded.</p>
+    <p class="hint">Describe the rough idea in a sentence or two. The AI will extract the real problem, audience and value — and ask sharp follow-up questions before anything gets branded. <strong>Why this matters:</strong> a strong brand can't be built on a fuzzy idea — this stage forces clarity first.</p>
     <textarea id="ideaInput" placeholder="e.g. I want to build an app that helps students find teammates for hackathons">${state._ideaRaw||''}</textarea>
     <button class="btn" id="extractBtn">Analyze idea</button>
     <div id="d1out"></div>
   </div>`;
   document.getElementById('extractBtn').onclick = async (e)=>{
     const idea = document.getElementById('ideaInput').value.trim();
-    if(!idea) return;
-    state._ideaRaw = idea;
     const out = document.getElementById('d1out');
+    if(!idea){
+      out.innerHTML = '<p class="err">Type your idea first — even one sentence is enough to start.</p>';
+      document.getElementById('ideaInput').focus();
+      return;
+    }
+    state._ideaRaw = idea;
     out.innerHTML = '<p class="loading">Interviewing the idea...</p>';
     try{
-      const prompt = `You are a founder-interview strategist for a brand tool called BrandForge (stage: Discover). A founder gave this rough idea:\n"""${idea}"""\nReturn ONLY valid JSON with keys: core_problem (string), target_user (string), context (string), constraints (string), value (string), open_questions (array of exactly 3 sharp, specific clarifying questions the founder must answer before branding starts). No markdown, no commentary, just the JSON object.`;
+      const prompt = `You are a founder-interview strategist for a brand tool called BrandForge (stage: Discover). A founder gave this rough idea, possibly with typos or informal phrasing — read past spelling mistakes and infer the most sensible real-world meaning (e.g. "finaicer"/"fincnaces" clearly means "financier"/"finances"). Do NOT hedge, refuse, or say something is undefined just because of a typo or brevity — commit to your single best concrete interpretation and build on it confidently. Idea:\n"""${idea}"""\nReturn ONLY valid JSON with keys: corrected_idea (string — the founder's idea rewritten as one clean, correctly-spelled, grammatical sentence, preserving their intent exactly, so they can confirm you understood them), core_problem (string), target_user (string), context (string), constraints (string), value (string), open_questions (array of exactly 3 sharp, specific clarifying questions the founder must answer before branding starts — if their wording was genuinely ambiguous between two real interpretations, make one of these 3 questions confirm which they meant). No markdown, no commentary, just the JSON object.`;
       const json = await callJSON(prompt, e.target, 'discover');
       state._draftDiscovery = json;
-      out.innerHTML = `<div class="out">${fieldsHTML(json, ['open_questions'])}
+      out.innerHTML = `<div class="out">
+        ${json.corrected_idea?`<div class="field"><b>Here's what we understood</b><p style="font-style:italic;">"${json.corrected_idea}"</p></div>`:''}
+        ${fieldsHTML(json, ['open_questions','corrected_idea'])}
         <div class="field"><b>Answer these before we proceed</b>
         ${json.open_questions.map((q,i)=>`<label>${q}</label><textarea id="fq${i}"></textarea>`).join('')}
         </div>
@@ -192,6 +532,15 @@ function renderDiscover(main){
         ${promptDisclosure('discover')}</div>`;
       document.getElementById('finalizeBtn').onclick = async (ev)=>{
         const answers = json.open_questions.map((q,i)=>`Q: ${q}\nA: ${document.getElementById('fq'+i).value.trim()}`).join('\n');
+        const placeholderRe = /^(idk|i ?don'?t know|dunno|n\/?a|skip|none|\?+|\.+|-+|x+)$/i;
+        const tooThin = json.open_questions.some((q,i)=>{
+          const v = document.getElementById('fq'+i).value.trim();
+          return !v || placeholderRe.test(v);
+        });
+        if(tooThin){
+          ev.target.insertAdjacentHTML('afterend', '<p class="err" style="margin-top:8px;">Answer each question above — even a short real answer works, just not a blank or a placeholder like "n/a".</p>');
+          return;
+        }
         state.discovery = { ...json, founder_answers: answers };
         delete state.discovery.open_questions;
         unlocked[1] = true; cur = 1; render();
@@ -202,8 +551,8 @@ function renderDiscover(main){
 
 // STAGE 2 — POSITION
 function renderPosition(main){
-  main.innerHTML = `<div class="card"><h2>Position</h2>
-  <p class="hint">Category, differentiator and value proposition, built from the Discover stage. Click any line below to edit it yourself.</p>
+  main.innerHTML = `<div class="card" style="${stageStyle()}"><h2>Position</h2>
+  <p class="hint">Category, differentiator and value proposition, built from the Discover stage. Click any line below to edit it yourself. <strong>Why this matters:</strong> if you can't say who it beats and why in one sentence, nothing after this stage will land.</p>
   <button class="btn" id="posBtn">${state.position?'Regenerate':'Generate'} positioning</button>
   <div id="d2out">${state.position?`<div class="out" data-root="position">${fieldsHTML(state.position)}</div>`:''}</div>
   <label>Why this angle? (optional — your reasoning goes in the brand kit)</label>
@@ -215,9 +564,10 @@ function renderPosition(main){
     try{
       const prompt = `You are a positioning strategist AI (stage: Position) for BrandForge. Discovery data:\n${JSON.stringify(state.discovery)}\nReturn ONLY valid JSON with keys: category (string), differentiator (string), value_proposition (one sentence), competitive_angle (string, how it beats the obvious alternative). No commentary.`;
       const json = await callJSON(prompt, e.target, 'position');
+      if(looksInsufficient(json)){ insufficientError(out, 'Discover'); return; }
       state.position = json;
-      out.innerHTML = `<div class="out" data-root="position">${fieldsHTML(json)}${promptDisclosure('position')}</div>`;
       unlocked[2] = true;
+      render();
     }catch(err){ out.innerHTML = `<p class="err">${err.message}</p>`; }
   };
   addNextButton(main, 2, !!state.position);
@@ -225,8 +575,8 @@ function renderPosition(main){
 
 // STAGE 3 — SHAPE
 function renderShape(main){
-  main.innerHTML = `<div class="card"><h2>Shape</h2>
-  <p class="hint">Personality, naming directions, tagline and voice. The AI proposes 3 names — you choose the one you're actually going with, and can edit any line.</p>
+  main.innerHTML = `<div class="card" style="${stageStyle()}"><h2>Shape</h2>
+  <p class="hint">Personality, naming directions, tagline and voice. The AI proposes 3 names — you choose the one you're actually going with, and can edit any line. <strong>Why this matters:</strong> a memorable name and a consistent voice are what make people repeat your brand to others.</p>
   <button class="btn" id="shapeBtn">${state.shape?'Regenerate':'Generate'} brand identity</button>
   <div id="d3out">${state.shape?renderShapeOut(state.shape):''}</div>
   <label>Why this direction? (optional — your reasoning goes in the brand kit)</label>
@@ -238,11 +588,11 @@ function renderShape(main){
     try{
       const prompt = `You are a brand-personality and naming strategist AI (stage: Shape) for BrandForge. Discovery:\n${JSON.stringify(state.discovery)}\nPositioning:\n${JSON.stringify(state.position)}\nReturn ONLY valid JSON with keys: personality_traits (array of 3-5 short trait+one-line justification strings), traits_to_avoid (array of 2-3 strings), naming_directions (array of 3 objects {name, rationale}), tagline (string), one_line_pitch (string), voice_principles (array of 3 strings). No commentary.`;
       const json = await callJSON(prompt, e.target, 'shape');
+      if(looksInsufficient(json)){ insufficientError(out, 'Discover'); return; }
       json.chosen_name = null;
       state.shape = json;
-      out.innerHTML = renderShapeOut(json);
       unlocked[3] = true;
-      wireNamingRadios();
+      render();
     }catch(err){ out.innerHTML = `<p class="err">${err.message}</p>`; }
   };
   wireNamingRadios();
@@ -264,8 +614,8 @@ function wireNamingRadios(){
 
 // STAGE 4 — CHALLENGE
 function renderChallenge(main){
-  main.innerHTML = `<div class="card"><h2>Challenge</h2>
-  <p class="hint">A separate critic agent checks Position and Shape for clichés, contradictions and audience mismatch. You decide whether to apply its fixes.</p>
+  main.innerHTML = `<div class="card" style="${stageStyle()}"><h2>Challenge</h2>
+  <p class="hint">A separate critic agent checks Position and Shape for clichés, contradictions and audience mismatch. You decide whether to apply its fixes. <strong>Why this matters:</strong> most brands fail by sounding like everyone else — this stage exists purely to catch that before you launch.</p>
   <button class="btn" id="critBtn">${state.critique?'Re-run critique':'Run critique'}</button>
   <div id="d4out">${state.critique?`<div class="out" data-root="critique">${fieldsHTML(state.critique)}${promptDisclosure('challenge_critique')}</div>`:''}</div>
   ${state.critique?`<button class="btn secondary" id="applyBtn">${state.applied?'Revisions applied ✓':'Apply revisions'}</button>`:''}
@@ -290,6 +640,7 @@ function renderChallenge(main){
         const json = await callJSON(prompt, null, 'challenge_revise');
         state.position = json.position; state.shape = json.shape; state.applied = true;
         unlocked[4] = true; render();
+        toast('Revisions applied — Position and Shape rewritten');
       }catch(err){ alert(err.message); e.target.disabled=false; e.target.textContent="Apply revisions"; }
     };
   }
@@ -298,8 +649,8 @@ function renderChallenge(main){
 
 // STAGE 5 — VISUALIZE
 function renderVisual(main){
-  main.innerHTML = `<div class="card"><h2>Visualize</h2>
-  <p class="hint">Typography, color mood and imagery direction that fit the strategy above.</p>
+  main.innerHTML = `<div class="card" style="${stageStyle()}"><h2>Visualize</h2>
+  <p class="hint">Typography, color mood and imagery direction that fit the strategy above. <strong>Why this matters:</strong> people judge a brand's look in seconds, long before they read a single word of it.</p>
   <button class="btn" id="visBtn">${state.visual?'Regenerate':'Generate'} visual direction</button>
   <div id="d5out"></div>
   <label>Your take on the visual direction (optional)</label>
@@ -310,20 +661,24 @@ function renderVisual(main){
   document.getElementById('visBtn').onclick = async (e)=>{
     out.innerHTML = '<p class="loading">Sketching the visual direction...</p>';
     try{
-      const prompt = `You are a visual-identity strategist AI (stage: Visualize) for BrandForge. Positioning:\n${JSON.stringify(state.position)}\nShape:\n${JSON.stringify(state.shape)}\nReturn ONLY valid JSON with keys: typography (string), color_mood (array of exactly 4 objects {name, hex, rationale}), composition_style (string), symbols_motifs (array of strings), concepts_to_avoid (array of strings). Use real hex codes. No commentary.`;
+      const prompt = `You are a visual-identity strategist AI (stage: Visualize) for BrandForge. Positioning:\n${JSON.stringify(state.position)}\nShape:\n${JSON.stringify(state.shape)}\nReturn ONLY valid JSON with keys: typography (string), color_mood (array of exactly 4 objects {name, hex, rationale}), composition_style (string), symbols_motifs (array of strings), concepts_to_avoid (array of strings), logo_svg (string — a complete, minimal, ORIGINAL abstract logomark as raw SVG markup, viewBox="0 0 120 120", using only <svg>,<circle>,<path>,<rect>,<polygon>,<line> elements with fill/stroke set to 2-3 of the hex colors from color_mood, no text elements, no external references, no <script> or event-handler attributes, reflecting the brand's naming direction and personality traits). Use real hex codes. No commentary, no markdown fences — just the JSON object.`;
       const json = await callJSON(prompt, e.target, 'visual');
       state.visual = json; unlocked[5] = true;
-      renderVisualOut(out, json);
+      render();
     }catch(err){ out.innerHTML = `<p class="err">${err.message}</p>`; }
   };
   addNextButton(main, 5, !!state.visual);
 }
 function renderVisualOut(out, json){
+  const logo = safeSvg(json.logo_svg);
   out.innerHTML = `<div class="out" data-root="visual">
-    ${fieldsHTML(json, ['color_mood'])}
+    ${logo?`<div class="field"><b>AI-generated logomark</b><div class="logopanel">${logo}</div></div>`:''}
+    ${fieldsHTML(json, ['color_mood','logo_svg'])}
     <div class="field"><b>Color mood</b><div class="swatches">
     ${json.color_mood.map(c=>`<div class="swatch"><div class="chip" style="background:${c.hex}"></div>${c.name}<br>${c.hex}</div>`).join('')}
-    </div></div>${promptDisclosure('visual')}</div>`;
+    </div>
+    <ul style="margin-top:8px;">${json.color_mood.map(c=>`<li><b>${c.name}</b> (${c.hex}) — ${c.rationale||'no rationale given'}</li>`).join('')}</ul>
+    </div>${promptDisclosure('visual')}</div>`;
 }
 
 // STAGE 6 — DELIVER
@@ -331,12 +686,23 @@ function renderDeliver(main){
   const editedCount = state.humanEdits.size;
   const noteCount = Object.values(state.humanNotes).filter(v=>v&&v.trim()).length;
   const chosenName = state.shape && state.shape.chosen_name ? state.shape.chosen_name.name : 'not chosen yet';
-  main.innerHTML = `<div class="card"><h2>Deliver</h2>
-  <p class="hint">A final consistency check across name, tagline, voice and visuals, plus launch-ready content.</p>
-  <div class="contrib"><b>Human contribution so far:</b> name chosen — <b>${chosenName}</b> · ${editedCount} field(s) hand-edited · ${noteCount} stage note(s) added</div>
+  main.innerHTML = `<div class="card" style="${stageStyle()}"><h2>Deliver</h2>
+  <p class="hint">A final consistency check across name, tagline, voice and visuals, plus launch-ready content. <strong>Why this matters:</strong> this is the moment everything either holds together as one brand — or doesn't, and you find out now instead of after launch.</p>
+  <div class="contrib">
+    <div class="chip"><span>Name chosen</span><b>${chosenName}</b></div>
+    <div class="chip"><span>Fields you edited</span><b>${editedCount}</b></div>
+    <div class="chip"><span>Notes you added</span><b>${noteCount}</b></div>
+  </div>
   <button class="btn" id="delBtn">${state.deliver?'Regenerate':'Run final check & generate launch kit'}</button>
-  <div id="d6out">${state.deliver?`<div class="out" data-root="deliver">${fieldsHTML(state.deliver)}${promptDisclosure('deliver')}</div>`:''}</div>
+  <div id="d6out">${state.deliver?renderSnapshot()+`<div class="out" data-root="deliver">${fieldsHTML(state.deliver)}
+    <button class="copybtn" onclick="copyText(this,${JSON.stringify(state.deliver.social_launch_post||'')})">Copy social post</button>
+    ${promptDisclosure('deliver')}</div>`:''}</div>
   ${state.deliver?'<button class="btn secondary" id="dlBtn">Download full brand kit</button>':''}
+  ${state.deliver?`<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px;">
+    <h2 style="font-size:1rem;">🛠 Build Blueprint <span style="font-size:.7rem;color:var(--sub);font-weight:400;">(optional — a technical starting plan for the idea itself)</span></h2>
+    <button class="btn" id="bpBtn">${state.blueprint?'Regenerate blueprint':'Generate build blueprint'}</button>
+    <div id="bpOut">${state.blueprint?renderBlueprint(state.blueprint):''}</div>
+  </div>`:''}
   </div>`;
   document.getElementById('delBtn').onclick = async (e)=>{
     const out = document.getElementById('d6out');
@@ -344,6 +710,7 @@ function renderDeliver(main){
     try{
       const prompt = `You are a consistency auditor and launch strategist AI (stage: Deliver) for BrandForge. Full brand data:\nDiscovery:${JSON.stringify(state.discovery)}\nPosition:${JSON.stringify(state.position)}\nShape:${JSON.stringify(state.shape)}\nVisual:${JSON.stringify(state.visual)}\nReturn ONLY valid JSON with keys: consistency_aligned (boolean, true if name/tagline/voice/visuals feel like one brand), conflicts_found (array of strings, empty if aligned), landing_headline (string), social_launch_post (string, 2-3 sentences), final_notes (string, one sentence of encouragement/advice for launch). No commentary.`;
       const json = await callJSON(prompt, e.target, 'deliver');
+      if(looksInsufficient(json)){ insufficientError(out, 'Discover'); return; }
       state.deliver = json;
       render();
     }catch(err){ out.innerHTML = `<p class="err">${err.message}</p>`; }
@@ -357,9 +724,35 @@ function renderDeliver(main){
         if(dl) await dl.save({filename:"brand-kit.md", data:md});
         else { const blob=new Blob([md],{type:'text/markdown'}); const a=document.createElement('a');
           a.href=URL.createObjectURL(blob); a.download='brand-kit.md'; a.click(); }
+        toast('Brand kit downloaded');
       }catch(e){ alert("Download unavailable: "+e.message); }
     };
+    document.getElementById('bpBtn').onclick = async (e)=>{
+      const bpOut = document.getElementById('bpOut');
+      bpOut.innerHTML = '<p class="loading">Sketching the technical plan...</p>';
+      try{
+        const prompt = `You are a pragmatic technical architect AI for BrandForge's optional "Build Blueprint" feature — a starting technical plan for the founder's actual product idea (not the brand). Idea/discovery data:\n${JSON.stringify(state.discovery)}\nReturn ONLY valid JSON with keys: category (string — the single best-fit category, e.g. "AI/ML", "Full-stack web app", "Mobile app", "Data/Analytics tool", "Browser extension", "Automation script"), recommended_stack (array of 4-6 short strings like "Frontend: React + Tailwind", "Backend: Node.js + Express", "Database: PostgreSQL", "AI: Claude API for X"), key_features (array of 4-6 short strings, the first features to build), pseudocode (string — 15-25 lines of clear, specific, well-commented pseudocode for this idea's core logic/flow, using \\n for line breaks, not generic boilerplate), category_icon_svg (string — a small original abstract SVG icon representing the category, viewBox="0 0 80 80", using only <svg>,<circle>,<path>,<rect>,<polygon>,<line>, no text, no script or event-handler attributes, 1-2 colors). No commentary, no markdown fences.`;
+        const json = await callJSON(prompt, e.target, 'blueprint');
+        state.blueprint = json;
+        bpOut.innerHTML = renderBlueprint(json);
+      }catch(err){ bpOut.innerHTML = `<p class="err">${err.message}</p>`; }
+    };
   }
+}
+function renderBlueprint(json){
+  const icon = safeSvg(json.category_icon_svg);
+  return `<div class="out" data-root="blueprint">
+    <div class="field" style="display:flex;align-items:center;gap:10px;">
+      ${icon?`<div style="width:40px;height:40px;flex:none;">${icon}</div>`:''}
+      <div><b>Category</b><div class="editable" contenteditable="true" data-path="category" data-orig="${esc(json.category)}">${json.category}</div></div>
+    </div>
+    ${fieldsHTML(json, ['category','category_icon_svg','pseudocode'])}
+    <div class="field"><b>Pseudocode</b>
+      <pre style="white-space:pre-wrap;font-family:monospace;font-size:.78rem;background:var(--paper);
+        border:1px solid var(--line);border-radius:3px;padding:10px;">${escapeHtml(json.pseudocode)}</pre>
+      <button class="copybtn" onclick="copyText(this,${JSON.stringify(json.pseudocode||'')})">Copy pseudocode</button>
+    </div>
+    ${promptDisclosure('blueprint')}</div>`;
 }
 
 function buildKitMarkdown(){
@@ -369,7 +762,7 @@ function buildKitMarkdown(){
   const edits = s.humanEdits.size ? Array.from(s.humanEdits).map(x=>`- ${x}`).join('\n')
     : '_No manual text edits — AI-generated wording kept as-is.._';
   const chosen = s.shape && s.shape.chosen_name ? `${s.shape.chosen_name.name} — ${s.shape.chosen_name.rationale}` : '_Not chosen yet._';
-  return `# Brand Kit\n\n## Human Contribution Log\n**Name chosen by the founder (of 3 AI-proposed directions):** ${chosen}\n\n**Fields the founder manually edited:**\n${edits}\n\n**Founder's reasoning per stage:**\n${notes}\n\n## Discovery\n${JSON.stringify(s.discovery,null,2)}\n\n## Positioning\n${JSON.stringify(s.position,null,2)}\n\n## Brand Shape\n${JSON.stringify(s.shape,null,2)}\n\n## Consistency Critique Applied\n${JSON.stringify(s.critique,null,2)}\n\n## Visual Direction\n${JSON.stringify(s.visual,null,2)}\n\n## Launch\n${JSON.stringify(s.deliver,null,2)}\n`;
+  return `# Brand Kit\n\n## Human Contribution Log\n**Name chosen by the founder (of 3 AI-proposed directions):** ${chosen}\n\n**Fields the founder manually edited:**\n${edits}\n\n**Founder's reasoning per stage:**\n${notes}\n\n## Discovery\n${JSON.stringify(s.discovery,null,2)}\n\n## Positioning\n${JSON.stringify(s.position,null,2)}\n\n## Brand Shape\n${JSON.stringify(s.shape,null,2)}\n\n## Consistency Critique Applied\n${JSON.stringify(s.critique,null,2)}\n\n## Visual Direction\n${JSON.stringify(s.visual,null,2)}\n\n## Logomark (SVG)\n\`\`\`svg\n${s.visual&&s.visual.logo_svg?s.visual.logo_svg:'Not generated.'}\n\`\`\`\n\n## Launch\n${JSON.stringify(s.deliver,null,2)}\n\n## Build Blueprint (optional, technical)\n${s.blueprint?JSON.stringify(s.blueprint,null,2):'Not generated.'}\n`;
 }
 
 function addNextButton(main, nextIdx, ready){
